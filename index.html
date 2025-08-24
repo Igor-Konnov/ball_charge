@@ -1,0 +1,464 @@
+
+html = r"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Tonnage Calculator (Расчёт тоннажа) — Standalone</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg: #0b1220;
+      --panel: #111827;
+      --muted: #9ca3af;
+      --text: #e5e7eb;
+      --accent: #06b6d4;
+      --accent-2: #22c55e;
+      --danger: #ef4444;
+      --warn: #f59e0b;
+      --card: #0f172a;
+      --border: #1f2937;
+      --ring: #0891b2;
+      --shadow: 0 10px 20px rgba(0,0,0,0.35);
+    }
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg: #f7f8fb;
+        --panel: #ffffff;
+        --card: #ffffff;
+        --text: #0f172a;
+        --muted: #4b5563;
+        --border: #e5e7eb;
+        --shadow: 0 6px 18px rgba(0,0,0,0.08);
+      }
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font: 16px/1.4 system-ui,-apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: var(--bg); color: var(--text);
+      display:flex; flex-direction:column;
+    }
+    header{
+      position:sticky; top:0; z-index:10; backdrop-filter: blur(6px);
+      background: linear-gradient(180deg, rgba(0,0,0,0.25), transparent);
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .wrap{max-width: 1100px; margin: 0 auto; padding: 0 16px;}
+    h1{font-size: clamp(20px, 4vw, 28px); margin:0 0 6px 0}
+    .sub{color: var(--muted); font-size: 14px}
+    main{flex:1; padding: 24px 0 48px}
+    .grid{
+      display: grid; gap: 16px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 980px){
+      .grid{ grid-template-columns: 1.2fr 1fr; }
+    }
+    .card{
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 16px; box-shadow: var(--shadow);
+    }
+    .section-title{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:12px; margin: 4px 0 16px 0;
+    }
+    .section-title h2{
+      margin:0; font-size: 18px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .badge{font-size:12px; color: var(--muted)}
+    .help{cursor:help; color: var(--muted); border-bottom:1px dotted var(--muted)}
+    .row{display:grid; gap:10px; grid-template-columns: 1.2fr 1fr 0.9fr;}
+    .row > *{align-self:center}
+    .row + .row{margin-top:10px}
+    label{font-weight:600}
+    input[type="number"], input[type="text"]{
+      width:100%; padding:10px 12px; border-radius:12px;
+      border:1px solid var(--border); background: var(--panel); color: var(--text);
+      font: inherit; outline: none;
+    }
+    input[type="number"]:focus, input[type="text"]:focus{
+      border-color: var(--ring); box-shadow: 0 0 0 3px rgba(8,145,178,0.25);
+    }
+    .unit{ color: var(--muted); font-size: 13px; }
+    .muted{ color: var(--muted); }
+    .kpi-grid{display:grid; gap:12px; grid-template-columns: repeat(2, minmax(0,1fr)); margin-top: 8px;}
+    .kpi{
+      background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+      padding: 12px;
+    }
+    .kpi .label{ font-size: 12px; color: var(--muted); }
+    .kpi .value{ font-weight:700; font-size: clamp(16px, 2.5vw, 22px); margin-top: 2px; }
+    .kpi .value small{ font-weight:600; font-size: 12px; color: var(--muted); margin-left: 6px;}
+    .footer-actions{
+      display:flex; flex-wrap: wrap; gap:8px; margin-top:14px;
+      justify-content:flex-end;
+    }
+    button{
+      border: 1px solid var(--border); background: var(--panel); color: var(--text); cursor:pointer;
+      padding: 10px 14px; border-radius: 12px; font-weight: 600;
+    }
+    button.primary{ background: linear-gradient(180deg, var(--accent), #0891b2); border-color: transparent; color: white; }
+    button.ghost{ background: transparent; }
+    .error{
+      padding: 10px 12px; border-radius: 12px; background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.4); color:#fecaca; margin-top:10px; display:none;
+    }
+    .ok{
+      padding: 10px 12px; border-radius: 12px; background: rgba(34,197,94,0.1);
+      border: 1px solid rgba(34,197,94,0.4); color:#bbf7d0; margin-top:10px; display:none;
+    }
+    .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    .tooltip{ border-bottom: 1px dotted var(--muted); cursor: help; }
+    .formula{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; color: var(--muted); }
+    .small{ font-size: 12px; }
+    .sep{ height:1px; background: var(--border); margin: 14px 0; }
+    .grid-2{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Расчёт тоннажа / Tonnage Calculator</h1>
+    <div class="sub">A self-contained web version reconstructed from the original Excel model. Works offline, no servers or libraries.</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="grid">
+    <section class="card" aria-labelledby="globals-h">
+      <div class="section-title">
+        <h2 id="globals-h">Global parameters</h2>
+        <span class="badge">Units: m, m³, t, %, kW</span>
+      </div>
+
+      <div class="row">
+        <label for="Pgros">Main drive power (Pgros)</label>
+        <input id="Pgros" type="text" inputmode="decimal" aria-describedby="Pgros-hint" value="6500">
+        <div class="unit">kW</div>
+      </div>
+      <div class="row">
+        <label for="Nrpm">Mill speed <span class="tooltip" title="Rotational speed used in power equations">Nrpm</span></label>
+        <input id="Nrpm" type="text" inputmode="decimal" value="14.13">
+        <div class="unit">rpm</div>
+      </div>
+      <div class="row">
+        <label for="GrossNet">Gross/net factor</label>
+        <input id="GrossNet" type="text" inputmode="decimal" value="1.07">
+        <div class="unit">×</div>
+      </div>
+      <div class="row">
+        <label for="bConst">b (empirical)</label>
+        <input id="bConst" type="text" inputmode="decimal" value="-1.073">
+        <div class="unit">—</div>
+      </div>
+      <p class="small muted">Excel equivalence: <span class="formula">O18, M8, M5, E37</span></p>
+      <div id="global-errors" class="error" role="alert" aria-live="polite"></div>
+    </section>
+
+    <section class="card" aria-labelledby="ch2-h">
+      <div class="section-title">
+        <h2 id="ch2-h">CH II (Second chamber)</h2>
+        <span class="badge">Uses measured fill level V%.</span>
+      </div>
+
+      <div class="row">
+        <label for="Di2">Diameter (Di)</label>
+        <input id="Di2" type="text" inputmode="decimal" value="5.3">
+        <div class="unit">m</div>
+      </div>
+      <div class="row">
+        <label for="Li2">Length (Li)</label>
+        <input id="Li2" type="text" inputmode="decimal" value="10.1">
+        <div class="unit">m</div>
+      </div>
+      <div class="row">
+        <label for="t2">Density (t/m³)</label>
+        <input id="t2" type="text" inputmode="decimal" value="4.5">
+        <div class="unit">t/m³</div>
+      </div>
+      <div class="row">
+        <label for="Vperc">Fill level (V%)</label>
+        <input id="Vperc" type="text" inputmode="decimal" value="26.3">
+        <div class="unit">%</div>
+      </div>
+
+      <div class="kpi-grid" aria-live="polite">
+        <div class="kpi">
+          <div class="label">Volume (V)</div>
+          <div class="value" id="V2">—</div>
+          <div class="formula">=(Di/2)^2·π·Li</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Material load (Wt)</div>
+          <div class="value" id="Wt2">—</div>
+          <div class="formula">=(V%·V·t/m³)/100</div>
+        </div>
+        <div class="kpi">
+          <div class="label">P(CHII)net</div>
+          <div class="value" id="P2net">—</div>
+          <div class="formula">=0.2846·(1.073−V%/100)·Di·Wt·N</div>
+        </div>
+        <div class="kpi">
+          <div class="label">P(CHII)gros</div>
+          <div class="value" id="P2gros">—</div>
+          <div class="formula">=P(CHII)net·GrossNet</div>
+        </div>
+      </div>
+      <p class="small muted">Excel equivalence: <span class="formula">I7, O24, O26</span></p>
+    </section>
+
+    <section class="card" aria-labelledby="ch1-h">
+      <div class="section-title">
+        <h2 id="ch1-h">CH I (First chamber)</h2>
+        <span class="badge">Solves quadratic for W,t.</span>
+      </div>
+
+      <div class="row">
+        <label for="Di1">Diameter (Di)</label>
+        <input id="Di1" type="text" inputmode="decimal" value="5.25">
+        <div class="unit">m</div>
+      </div>
+      <div class="row">
+        <label for="Li1">Length (Li)</label>
+        <input id="Li1" type="text" inputmode="decimal" value="4.15">
+        <div class="unit">m</div>
+      </div>
+      <div class="row">
+        <label for="t1">Density (t/m³)</label>
+        <input id="t1" type="text" inputmode="decimal" value="4.3">
+        <div class="unit">t/m³</div>
+      </div>
+
+      <div class="kpi-grid" aria-live="polite">
+        <div class="kpi">
+          <div class="label">Volume (V)</div>
+          <div class="value" id="V1">—</div>
+          <div class="formula">=(Di/2)^2·π·Li</div>
+        </div>
+        <div class="kpi">
+          <div class="label">P(CHI)gross</div>
+          <div class="value" id="P1gros">—</div>
+          <div class="formula">=Pgros − P(CHII)gros</div>
+        </div>
+        <div class="kpi">
+          <div class="label">P(CHI)net</div>
+          <div class="value" id="P1net">—</div>
+          <div class="formula">=P(CHI)gross / GrossNet</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Discriminant (D)</div>
+          <div class="value" id="Disc">—</div>
+          <div class="formula">=b² − 4·a·c</div>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+      <div class="kpi-grid">
+        <div class="kpi" style="grid-column: span 2;">
+          <div class="label">Result — W,t (First chamber)</div>
+          <div class="value" id="Wt1">— <small>t</small></div>
+          <div class="formula">=(-b − √D) / (2a), where a=1/(V·t/m³), c=P(CHI)net/(0.2846·N·Di)</div>
+        </div>
+      </div>
+
+      <div id="warn" class="error" role="alert" aria-live="polite"></div>
+      <div id="ok" class="ok" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="card" aria-labelledby="about-h">
+      <div class="section-title">
+        <h2 id="about-h">About & notes</h2>
+      </div>
+      <ul class="small muted">
+        <li>This page re-implements the Excel model: <span class="formula">E7, I7, O24, O26, N31, N33, M35, M37, M39, M41, M43</span>.</li>
+        <li>Constants: 0.2846 and 1.073 come from the original workbook.</li>
+        <li>Enter decimals with "." or "," — both are accepted.</li>
+        <li>All calculations run in your browser; nothing is sent anywhere.</li>
+      </ul>
+      <div class="footer-actions">
+        <button id="reset">Reset to workbook defaults</button>
+        <button class="primary" id="download">Download current inputs (JSON)</button>
+        <input id="file" type="file" accept="application/json" class="sr-only" />
+        <button class="ghost" id="upload">Load inputs (JSON)</button>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+/* Utilities */
+function parseNum(v){
+  if(typeof v !== "string") v = String(v ?? "");
+  v = v.trim().replace(",", ".");
+  if(v === "") return NaN;
+  return Number(v);
+}
+function fmt(v, digits=3){
+  if(!isFinite(v)) return "—";
+  const out = Number(v).toLocaleString(undefined, {maximumFractionDigits: digits});
+  return out;
+}
+function set(id, value, unit){
+  const el = document.getElementById(id);
+  el.textContent = fmt(value);
+  if(unit){
+    const small = document.createElement("small");
+    small.textContent = unit;
+    el.appendChild(small);
+  }
+}
+
+/* Default inputs from the workbook */
+const DEFAULTS = {
+  Pgros: 6500, Nrpm: 14.13, GrossNet: 1.07, bConst: -1.073,
+  Di2: 5.3, Li2: 10.1, t2: 4.5, Vperc: 26.3,
+  Di1: 5.25, Li1: 4.15, t1: 4.3
+};
+
+function collect(){
+  const gErr = document.getElementById("global-errors");
+  gErr.style.display = "none"; gErr.textContent = "";
+
+  const vals = {
+    Pgros: parseNum(document.getElementById("Pgros").value),
+    Nrpm: parseNum(document.getElementById("Nrpm").value),
+    GrossNet: parseNum(document.getElementById("GrossNet").value),
+    bConst: parseNum(document.getElementById("bConst").value),
+    // CH II
+    Di2: parseNum(document.getElementById("Di2").value),
+    Li2: parseNum(document.getElementById("Li2").value),
+    t2: parseNum(document.getElementById("t2").value),
+    Vperc: parseNum(document.getElementById("Vperc").value),
+    // CH I
+    Di1: parseNum(document.getElementById("Di1").value),
+    Li1: parseNum(document.getElementById("Li1").value),
+    t1: parseNum(document.getElementById("t1").value),
+  };
+
+  // basic validation
+  const msgs = [];
+  function pos(name, key){ if(!(vals[key] > 0)) msgs.push(name + " must be > 0"); }
+  pos("Main drive power", "Pgros");
+  pos("Speed (Nrpm)", "Nrpm");
+  pos("Gross/net factor", "GrossNet");
+  pos("Di (CH II)", "Di2"); pos("Li (CH II)", "Li2"); pos("t/m3 (CH II)", "t2");
+  pos("Di (CH I)", "Di1"); pos("Li (CH I)", "Li1"); pos("t/m3 (CH I)", "t1");
+  if(!isFinite(vals.bConst)) msgs.push("b must be a number");
+  if(!(vals.Vperc >= 0 && vals.Vperc <= 100)) msgs.push("V% must be between 0 and 100");
+
+  if(msgs.length){
+    gErr.style.display = "block";
+    gErr.textContent = msgs.join(" • ");
+    return {vals, ok:false};
+  }
+  return {vals, ok:true};
+}
+
+function compute(){
+  const {vals, ok} = collect();
+  const warn = document.getElementById("warn");
+  const okMsg = document.getElementById("ok");
+  warn.style.display = "none"; okMsg.style.display = "none";
+
+  if(!ok){
+    set("V2", NaN); set("Wt2", NaN); set("P2net", NaN); set("P2gros", NaN);
+    set("V1", NaN); set("P1gros", NaN); set("P1net", NaN); set("Disc", NaN); set("Wt1", NaN, "t");
+    return;
+  }
+
+  const {Pgros, Nrpm, GrossNet, bConst, Di2, Li2, t2, Vperc, Di1, Li1, t1} = vals;
+
+  // CH II
+  const V2 = Math.PI * Math.pow(Di2/2, 2) * Li2; // (Di/2)^2 * pi * Li
+  const Wt2 = (Vperc * V2 * t2) / 100.0;
+  const P2net = 0.2846 * (1.073 - Vperc/100.0) * Di2 * Wt2 * Nrpm;
+  const P2gros = P2net * GrossNet;
+
+  // CH I
+  const V1 = Math.PI * Math.pow(Di1/2, 2) * Li1;
+  const P1gros = Pgros - P2gros;
+  const P1net  = P1gros / GrossNet;
+
+  const a = 1.0 / (V1 * t1);
+  const b = bConst;
+  const c = P1net / (0.2846 * Nrpm * Di1);
+  const D = b*b - 4*a*c;
+
+  // Update UI
+  set("V2", V2); set("Wt2", Wt2, "t"); set("P2net", P2net, "kW"); set("P2gros", P2gros, "kW");
+  set("V1", V1); set("P1gros", P1gros, "kW"); set("P1net", P1net, "kW"); set("Disc", D);
+
+  if(D < 0){
+    warn.style.display = "block";
+    warn.textContent = "Discriminant < 0: no real solution for W,t (check inputs).";
+    set("Wt1", NaN, "t");
+    return;
+  }
+  const Wt1 = (-b - Math.sqrt(D)) / (2*a);
+  set("Wt1", Wt1, "t");
+
+  // Show OK if matching the workbook default closely
+  if(near(vals, DEFAULTS)){
+    const delta = Math.abs(Wt1 - 84.35654439560554);
+    if(delta <= 1e-3){
+      okMsg.style.display = "block";
+      okMsg.textContent = "✔ Matches the original Excel result (W,t ≈ 84.3565 t).";
+    }
+  }
+}
+
+function near(a,b){
+  // check if all defaults equal (for the friendly message)
+  return Object.keys(b).every(k => Math.abs(parseNum(a[k]) - parseNum(b[k])) < 1e-9);
+}
+
+function resetDefaults(){
+  for(const [k,v] of Object.entries(DEFAULTS)){
+    const el = document.getElementById(k);
+    if(el) el.value = v;
+  }
+  compute();
+}
+
+function downloadJSON(){
+  const {vals, ok} = collect();
+  if(!ok) return;
+  const blob = new Blob([JSON.stringify(vals, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "tonnage_calculator_inputs.json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 500);
+}
+
+document.getElementById("download").addEventListener("click", downloadJSON);
+document.getElementById("reset").addEventListener("click", resetDefaults);
+document.getElementById("upload").addEventListener("click", ()=> document.getElementById("file").click());
+document.getElementById("file").addEventListener("change", (e)=>{
+  const file = e.target.files?.[0]; if(!file) return;
+  const fr = new FileReader();
+  fr.onload = ()=>{
+    try{
+      const vals = JSON.parse(String(fr.result||"{}"));
+      for(const [k,v] of Object.entries(vals)){
+        if(document.getElementById(k)) document.getElementById(k).value = v;
+      }
+      compute();
+    }catch(err){
+      alert("Invalid JSON: " + err.message);
+    }
+  };
+  fr.readAsText(file);
+});
+
+for(const id of ["Pgros","Nrpm","GrossNet","bConst","Di2","Li2","t2","Vperc","Di1","Li1","t1"]){
+  document.getElementById(id).addEventListener("input", compute);
+}
+
+resetDefaults();
+</script>
+</body>
+</html>
+
